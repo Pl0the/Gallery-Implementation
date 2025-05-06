@@ -15,14 +15,14 @@ class GalleryImp extends Phaser.Scene {
         //this.my.sprite.bullet = [];   
         //this.maxBullets = 5;           // Don't create more than this many bullets
         
-        this.bulletCooldown = 30;        // Number of update() calls to wait before making a new bullet
+        this.bulletCooldown = 25;        // Number of update() calls to wait before making a new bullet
         this.bulletCooldownCounter = 0;
         this.bulletCooldownCounter2 = 0;
         this.gameStart = 180;
 
         this.dashCooldown = 180;
         this.dashCooldownTimer = 0; 
-        this.dashDistance = 100;   
+        this.dashDistance = 150;   
 
         this.playerAlive = true;
 
@@ -42,9 +42,11 @@ class GalleryImp extends Phaser.Scene {
         this.row1 = 120;
         this.row2 = 200;
 
-        this.playerHealth = 2;
+        this.playerHealth = 3;
         this.dead = 0;
         this.clicked = false;
+        this.level = 9000;
+        this.levelFont = 1;
 
 
     }
@@ -81,10 +83,10 @@ class GalleryImp extends Phaser.Scene {
         
         this.points = [
             -20, -20,
-            200, 400,
+            500, 500,
             20, 700,
-            -700, -20,
-            -30, -30
+            -100, -20,
+            -20, -20
         ];
         this.curve = new Phaser.Curves.Spline(this.points);
 
@@ -145,11 +147,11 @@ class GalleryImp extends Phaser.Scene {
         this.left = this.input.keyboard.addKey("A");
         this.right = this.input.keyboard.addKey("D");
         this.space = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-        this.dashKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+        this.dashKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
         // Set movement speeds (in pixels/tick)
         this.playerSpeed = 6;
-        this.bulletSpeed = 8;
+        this.bulletSpeed = 12;
         this.CowBulletSpeed = 8;
 
         // update HTML description
@@ -226,6 +228,8 @@ class GalleryImp extends Phaser.Scene {
         my.text.score = this.add.bitmapText(680, 0, "rocketSquare", "Score " + this.myScore);
 
         my.text.health = this.add.bitmapText(880, 750, "rocketSquare", "HP: " + this.playerHealth);
+
+        my.text.levelNum = this.add.bitmapText(150, 0, "rocketSquare", "LEVEL: " + this.levelFont);
         
         // Put title on screen
         this.add.text(10, 5, "Revenge of the Cute Animals!", {
@@ -253,10 +257,16 @@ class GalleryImp extends Phaser.Scene {
         });
         my.text.GameOver.visible = false;
 
-        my.text.Retry = this.add.text(385, 500, 'retry', {fontSize: 38});
+        my.text.Retry = this.add.text(405, 500, 'retry', {fontSize: 38});
         my.text.Retry.setInteractive({ useHandCursor: true });
         my.text.Retry.on('pointerdown', () => this.init_game()); 
         my.text.Retry.visible = false;
+
+        my.text.dash = this.add.text(10, 760, "DASH AVAILABLE!", {
+            fontFamily: 'Times, serif',
+            fontSize: 24,
+        });
+        my.text.dash.visible = false;
 
 
     }
@@ -270,15 +280,24 @@ class GalleryImp extends Phaser.Scene {
         if (this.dashCooldownTimer > 0) {
             this.dashCooldownTimer--;
         }
+
+        if(this.dashCooldownTimer <= 0){
+            this.my.text.dash.visible = true;
+        }
         
         if (Phaser.Input.Keyboard.JustDown(this.dashKey) && this.dashCooldownTimer <= 0 && this.playerAlive) {
-            // Dash in the direction player is currently moving
-            if (this.left.isDown && my.sprite.alienBlue.x - this.dashDistance > 0) {
+            if (this.left.isDown) {
+                
                 my.sprite.alienBlue.x -= this.dashDistance;
-            } else if (this.right.isDown && my.sprite.alienBlue.x + this.dashDistance < game.config.width) {
+                my.text.dash.visible = false;
+
+            } else if (this.right.isDown) {
+                
                 my.sprite.alienBlue.x += this.dashDistance;
+                my.text.dash.visible = false;
+
             }
-            this.dashCooldownTimer = this.dashCooldown;  // reset cooldown
+            this.dashCooldownTimer = this.dashCooldown;
         }
 
         // Moving left
@@ -367,11 +386,21 @@ class GalleryImp extends Phaser.Scene {
 
         for (let enemy of my.sprite.enemyGroup.getChildren()) {
             if (enemy.active && this.collides(enemy, my.sprite.alienBlue)) {
-                my.text.GameOver.visible = true;
-                my.text.Retry.visible = true;
-                this.playerSpeed = 0;
-                this.playerAlive = false;
                 
+                if (this.playerAlive && this.playerHealth > 0){
+                    this.playerHealth -= 1;
+                    this.updateHealth();
+        
+                    if (this.playerHealth <= 0) {
+                        this.updateHealth();
+                        this.playerHealth = 0;
+                        my.text.GameOver.visible = true;
+                        my.text.Retry.visible = true;
+                        this.playerSpeed = 0;
+                        this.playerAlive = false;
+                    }
+                }
+                this.updateHealth();
             }
             
         }
@@ -385,15 +414,15 @@ class GalleryImp extends Phaser.Scene {
                     this.updateHealth();
         
                     if (this.playerHealth <= 0) {
-                        
-                        this.playerHealth = 0;
                         this.updateHealth();
+                        this.playerHealth = 0;
                         my.text.GameOver.visible = true;
                         my.text.Retry.visible = true;
                         this.playerSpeed = 0;
                         this.playerAlive = false;
                     }
                 }
+                this.updateHealth();
             }
         }
         
@@ -404,7 +433,7 @@ class GalleryImp extends Phaser.Scene {
                         from: 0,
                         to: 1,
                         delay: 2000,
-                        duration: 4000,
+                        duration: 9000,
                         ease: 'Sine.easeInOut',
                         repeat: -1,
                         yoyo: true,
@@ -453,6 +482,10 @@ class GalleryImp extends Phaser.Scene {
         this.my.text.health.setText("HP: " + this.playerHealth);
     }
 
+    updateLevel() {
+        this.my.text.levelNum.setText("LEVEL: " + this.levelFont);
+    }
+
     collides(a, b) {
         if (Math.abs(a.x - b.x) > (a.displayWidth / 2 + b.displayWidth / 2)) return false;
         if (Math.abs(a.y - b.y) > (a.displayHeight / 2 + b.displayHeight / 2)) return false;
@@ -486,9 +519,12 @@ class GalleryImp extends Phaser.Scene {
             my.text.score.setText("Score " + this.myScore);
             my.text.GameOver.visible = false;
             my.text.Retry.visible = false;
+            this.levelFont = 1;
         } else {
             my.text.helloButton.visible = false;
             my.text.winText.visible = false;
+            this.level -= 250;
+            this.levelFont++;
         }
     
         this.dead = 0;
@@ -498,8 +534,9 @@ class GalleryImp extends Phaser.Scene {
         this.playerSpeed = 6;
         this.cowFollow = true;
         this.won = false;
-        this.playerHealth = 2;
+        this.playerHealth = 3;
         this.updateHealth();
+        this.updateLevel();
     
         let cowNum = 0;
         let mooseNum = 0;
@@ -521,7 +558,7 @@ class GalleryImp extends Phaser.Scene {
                     from: 0,
                     to: 1,
                     delay: 2000,
-                    duration: 4000,
+                    duration: this.level,
                     ease: 'Sine.easeInOut',
                     repeat: -1,
                     yoyo: true,
